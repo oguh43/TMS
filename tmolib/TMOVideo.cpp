@@ -50,7 +50,7 @@ int TMOVideo::setNameOut(char *suffix)
     filename[point + i] = suffix[i];
   filename[point + i] = 0;
 
-  strcat(filename, ".avi");
+  strcat(filename, ".mp4");
   vNameOut = filename;
   return 0;
 }
@@ -62,7 +62,7 @@ int TMOVideo::setNameOut(char *suffix)
 int TMOVideo::createOutputVideo(const TMOVideo &ref)
 {
 
-  cv::VideoWriter out = cv::VideoWriter(ref.vNameOut, cv::VideoWriter::fourcc('H', '2', '6', '4'), ref.fps, cv::Size(ref.frameWidth, ref.frameHeight));
+  cv::VideoWriter out = cv::VideoWriter(ref.vNameOut, cv::VideoWriter::fourcc('m', 'p', '4', 'v'), ref.fps, cv::Size(ref.frameWidth, ref.frameHeight));
   if (!out.isOpened())
     throw TMO_EFILE;
   writerObject = out;
@@ -76,7 +76,7 @@ int TMOVideo::createOutputVideo(const TMOVideo &ref)
  * */
 int TMOVideo::createOutputVideoByName(const char *filename, int width, int height)
 {
-  cv::VideoWriter out = cv::VideoWriter(filename, cv::VideoWriter::fourcc('H', '2', '6', '4'), 30, cv::Size(width, height));
+  cv::VideoWriter out = cv::VideoWriter(filename, cv::VideoWriter::fourcc('m', 'p', '4', 'v'), 30, cv::Size(width, height));
   if (!out.isOpened())
     throw TMO_EFILE;
   writerObject = out;
@@ -98,16 +98,16 @@ int TMOVideo::setMatFrame(cv::VideoWriter out, cv::Mat frame)
  * @out video writer object of the destination video
  * @frame TMOImage frame which is to be written
  * */
-int TMOVideo::setTMOImageFrame(cv::VideoWriter out, TMOImage &img)
+int TMOVideo::setTMOImageFrame(cv::VideoWriter &out, TMOImage &img)
 {
   cv::Mat frame;
-  frame.create(img.GetWidth(), img.GetHeight(), CV_32FC3);
+  frame.create(img.GetHeight(), img.GetWidth(), CV_64FC3);
   TMOImageToCvMat(img, frame);
 
   frame.convertTo(frame, CV_8UC3, 255.0);
 
   out.write(frame);
-  frame.release();
+  return 0;
 }
 
 /**
@@ -154,37 +154,25 @@ int TMOVideo::TMOImageToCvMat(TMOImage &img, cv::Mat &frame)
 {
   int height = img.GetHeight();
   int width = img.GetWidth();
-  cv::Mat mergedMat = cv::Mat::zeros(height, width, CV_64FC3);
-
-  cv::Mat blueMat = cv::Mat::zeros(height, width, CV_64FC1);
-  cv::Mat greenMat = cv::Mat::zeros(height, width, CV_64FC1);
-  cv::Mat redMat = cv::Mat::zeros(height, width, CV_64FC1);
-
-  std::vector<cv::Mat> channels;
-  double *data = img.GetData();
-  double p;
-  for (int j = 0; j < height; j++)
-  {
-    for (int i = 0; i < width; i++)
-    {
-      redMat.at<double>(j, i) = *data++;
-      greenMat.at<double>(j, i) = *data++;
-      blueMat.at<double>(j, i) = *data++;
+  
+  frame = cv::Mat(height, width, CV_64FC3);
+  
+  double *srcData = img.GetData();
+  
+  for (int y = 0; y < height; y++) {
+    for (int x = 0; x < width; x++) {
+      int idx = (y * width + x) * 3;
+      
+      double r = srcData[idx + 0];  // Red
+      double g = srcData[idx + 1];  // Green  
+      double b = srcData[idx + 2];  // Blue
+      
+      frame.at<cv::Vec3d>(y, x)[0] = b;  // Blue channel
+      frame.at<cv::Vec3d>(y, x)[1] = g;  // Green channel
+      frame.at<cv::Vec3d>(y, x)[2] = r;  // Red channel
     }
   }
-
-  channels.push_back(blueMat);
-  channels.push_back(greenMat);
-  channels.push_back(redMat);
-  cv::merge(channels, mergedMat);
-
-  frame = mergedMat;
-
-  blueMat.release();
-  greenMat.release();
-  redMat.release();
-  mergedMat.release();
-
+  
   return 0;
 }
 /**
@@ -275,3 +263,9 @@ int TMOVideo::setVName(char *name)
   vName = name;
   return 0;
 }
+
+cv::VideoWriter& TMOVideo::getWriterRef()
+{
+    return writerObject;
+}
+
