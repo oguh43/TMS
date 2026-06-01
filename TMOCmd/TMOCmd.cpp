@@ -276,19 +276,37 @@ int TMOCmd::main(int argc, char *argv[])
 				}
 				else ///if trasform video is not implemented cast will fail and frame by frame will be called
 				{
+               std::cerr << "Frames: " << inVideo.GetTotalNumberOfFrames() << std::endl;
 					for (int j = 0; j < inVideo.GetTotalNumberOfFrames(); j++)
-					{
-						inVideo.getTMOImageVideoFrame(inVideo.getVideoCaptureObject(), j, input);
-
-						input.Convert(TMO_RGB);
-						output.New(input);
-
-						op[opindex]->SetImages(input, output);
-						op[opindex]->Transform();
-
-						outVideo.setTMOImageFrame(outVideo.getVideoWriterObject(), output);
-						output.Close();
-					}
+               {
+                  std::cerr << "Frame " << j << " / " << inVideo.GetTotalNumberOfFrames() << std::endl;
+                  
+                  inVideo.getTMOImageVideoFrame(inVideo.getVideoCaptureObject(), j, input);
+                  input.Convert(TMO_RGB);
+                  
+                  // Debug: skontrolujte input
+                  double* inputData = input.GetData();
+                  std::cerr << "  Input pixel[0]: " << inputData[0] << ", " << inputData[1] << ", " << inputData[2] << std::endl;
+                  
+                  output.New(input);
+                  if (j == 0) {
+                     input.SetFilename("debug_input_frame0.tif");
+                     input.Save();
+                  }
+                  op[opindex]->SetImages(input, output);
+                  int result = op[opindex]->Transform();
+                  std::cerr << "  Transform result: " << result << std::endl;
+                  
+                  // Debug: skontrolujte output
+                  double* outputData = output.GetData();
+                  std::cerr << "  Output pixel[0]: " << outputData[0] << ", " << outputData[1] << ", " << outputData[2] << std::endl;
+                  if (j == 0) {
+                     output.SetFilename("debug_frame0.tif");
+                     output.Save();
+                  }
+                  outVideo.setTMOImageFrame(outVideo.getWriterRef(), output);
+                  output.Close();
+               }
 				}
 			}
 			else
