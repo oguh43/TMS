@@ -433,3 +433,4 @@ int TMOCmd::Bar(int part, int all)
 		printf("%2i%%\b\b\b", 100 * part / all);
 	return 0;
 }
+
